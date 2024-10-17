@@ -19,9 +19,6 @@ class TicketBookingSystem:
             col = (total_seats + i) % size
             self.seats[row][col] = '[-]'  # Asiento no disponible
 
-        # Crear una lista de asientos disponibles
-        self.available_seats_list = [(i, j) for i in range(size) for j in range(size) if self.seats[i][j] == '[O]']
-
     def display_seats(self):
         print("Estado de los asientos:")
         print("    " + "   ".join(str(j) for j in range(self.size)))  # Encabezado de columnas
@@ -30,20 +27,29 @@ class TicketBookingSystem:
         print("\n")
 
     def reserve_ticket(self, user_id):
-        with self.lock:  # Adquirir el bloqueo antes de acceder a los asientos
-            if self.available_seats <= 0:
-                print(f"Usuario {user_id} no pudo reservar. No hay asientos disponibles.")
-                return
-            
-            # Seleccionar aleatoriamente un asiento de la lista de asientos disponibles
-            i, j = random.choice(self.available_seats_list)
-            print(f"Usuario {user_id} reservando asiento en ({i}, {j})...")
-            time.sleep(random.uniform(0.1, 0.5))  # Simula el tiempo de reserva
-            self.seats[i][j] = '[X]'  # X = Asiento reservado
-            self.available_seats -= 1  # Decrementar el contador de asientos disponibles
-            self.available_seats_list.remove((i, j))  # Remover el asiento reservado de la lista
-            print(f"Asiento reservado para el usuario {user_id} en ({i}, {j}).")
-            self.display_seats()  # Mostrar estado actualizado
+        while True:
+            with self.lock:  # Adquirir el bloqueo antes de acceder a los asientos
+                if self.available_seats <= 0:
+                    print(f"Usuario {user_id} no pudo reservar. No hay asientos disponibles.")
+                    return
+
+                # Generar coordenadas aleatorias para el asiento
+                i = random.randint(0, self.size - 1)
+                j = random.randint(0, self.size - 1)
+
+                # Verificar si el asiento está disponible
+                if self.seats[i][j] == '[O]':  # Asiento disponible
+                    print(f"Usuario {user_id} reservando asiento en ({i}, {j})...")
+                    time.sleep(random.uniform(0.1, 0.5))  # Simula el tiempo de reserva
+                    self.seats[i][j] = '[X]'  # X = Asiento reservado
+                    self.available_seats -= 1  # Decrementar el contador de asientos disponibles
+                    print(f"Asiento reservado para el usuario {user_id} en ({i}, {j}).")
+                    self.display_seats()  # Mostrar estado actualizado
+                    time.sleep(1)
+                    return
+                else:
+                    print(f"Usuario {user_id} intentó reservar ({i}, {j}), pero el asiento está ocupado.")
+                    time.sleep(1)
 
 # Función que representa la acción de un usuario que intenta reservar un boleto
 def user_action(user_id, booking_system):
@@ -63,7 +69,7 @@ booking_system.display_seats()
 
 # Crear múltiples hilos para simular usuarios
 threads = []
-for user_id in range(10):  # 10 usuarios intentando reservar
+for user_id in range(15):  # 15 usuarios intentando reservar
     thread = threading.Thread(target=user_action, args=(user_id, booking_system))
     threads.append(thread)
     thread.start()
